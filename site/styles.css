@@ -378,13 +378,15 @@ fieldset legend {
 
 .game-screen {
   display: grid;
+  height: 100dvh;
   place-items: center;
-  padding: max(42px, env(safe-area-inset-top)) max(40px, env(safe-area-inset-right)) max(42px, env(safe-area-inset-bottom)) max(24px, env(safe-area-inset-left));
+  padding: max(16px, env(safe-area-inset-top)) max(40px, env(safe-area-inset-right)) max(14px, env(safe-area-inset-bottom)) max(24px, env(safe-area-inset-left));
 }
 
 .play-frame {
   display: grid;
-  gap: 13px;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  height: 100%;
   max-width: 100%;
   width: max-content;
 }
@@ -424,6 +426,7 @@ fieldset legend {
   color: var(--faint);
   font-family: var(--sans);
   font-size: 0.61rem;
+  justify-content: center;
   line-height: 1;
 }
 
@@ -437,6 +440,7 @@ fieldset legend {
 
 .play-frame .play-surface {
   --board-size: min(76vmin, calc(100dvh - 170px), 700px);
+  align-self: center;
 }
 
 .board {
@@ -683,7 +687,6 @@ fieldset legend {
 }
 
 .dialog-actions { display: grid; gap: 9px; }
-.dialog-actions .primary-action { margin: 0; }
 .dialog-actions > button { min-height: 44px; }
 
 .analysis-layout {
@@ -901,9 +904,8 @@ fieldset legend {
   .recent-game { align-items: flex-start; flex-direction: column; gap: 2px; }
   .recent-meta { text-align: left; }
   .game-screen {
-    padding: max(22px, env(safe-area-inset-top)) max(13px, env(safe-area-inset-right)) max(20px, env(safe-area-inset-bottom)) max(13px, env(safe-area-inset-left));
+    padding: max(13px, env(safe-area-inset-top)) max(13px, env(safe-area-inset-right)) max(13px, env(safe-area-inset-bottom)) max(13px, env(safe-area-inset-left));
   }
-  .play-frame { gap: 10px; }
   .play-surface { gap: 9px; grid-template-columns: var(--board-size) 12px; }
   .play-frame .play-surface { --board-size: min(78vw, calc(100dvh - 135px), 72vh); }
   .analysis-board-wrap .play-surface { --board-size: min(79vw, 57vh, 560px); }

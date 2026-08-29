@@ -15,6 +15,8 @@ test("the play surface includes its aligned frame and forced-pass control", asyn
   assert.match(app, /class="play-footer"/);
   assert.match(app, /data-action="pass"/);
   assert.match(app, /last-move-marker/);
+  assert.match(app, /© 2026 SB · <a/);
+  assert.match(app, /<button type="button" data-action="analyze-finished">Analyze game<\/button>/);
 });
 
 test("the rules page credits the engine source and trademark owner", async () => {

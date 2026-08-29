@@ -339,8 +339,7 @@ function playHeaderMarkup() {
 function playFooterMarkup() {
   return `
     <footer class="play-footer">
-      <span>© 2026 SB</span>
-      <a href="https://github.com/barasch/othello/blob/main/LICENSE">CC BY-SA 4.0</a>
+      <span>© 2026 SB · <a href="https://github.com/barasch/othello/blob/main/LICENSE">CC BY-SA 4.0</a></span>
     </footer>`;
 }
 
@@ -354,7 +353,7 @@ function resultDialog() {
         <h2 id="result-title">${resultText(game.board, game.humanColor)}</h2>
         <p class="final-score"><span>Black ${black}</span><span>White ${white}</span></p>
         <div class="dialog-actions">
-          <button type="button" class="primary-action" data-action="analyze-finished">Analyze game</button>
+          <button type="button" data-action="analyze-finished">Analyze game</button>
           <button type="button" data-action="restart">Play again</button>
         </div>
       </section>
@@ -459,7 +458,7 @@ function finishGame() {
   stopWorker();
   renderPlay();
   announce(`Game over. ${resultText(game.board, game.humanColor)}. Black ${counts.black}, White ${counts.white}.`);
-  requestAnimationFrame(() => document.querySelector(".result-dialog .primary-action")?.focus());
+  requestAnimationFrame(() => document.querySelector('[data-action="analyze-finished"]')?.focus());
 }
 
 function performGameMove(move, side) {
