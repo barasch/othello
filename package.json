@@ -1,0 +1,14 @@
+{
+  "name": "othello",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test",
+    "check": "node --check site/js/app.js && node --check site/js/ai.worker.js",
+    "build": "node scripts/build.mjs"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}
