@@ -2,7 +2,6 @@ import {
   BLACK,
   WHITE,
   PASS,
-  advanceAfterMove,
   applyMove,
   coordinateOf,
   countDiscs,
@@ -10,11 +9,17 @@ import {
   initialBoard,
   isTerminal,
   legalMoves,
+  opponent,
   resultText,
   sideName,
 } from "./rules.js";
 import { formatLine } from "./engine.js";
 import { parseXotList, prepareXotOpening } from "./openings.js";
+import {
+  COMPUTER_MOVE_DELAY_MS,
+  lastPlacement,
+  resolveTurnAfterPlacement,
+} from "./play.js";
 import {
   addVariation,
   createAnalysisTree,
@@ -45,6 +50,7 @@ let analysisTree = null;
 let analysisResult = null;
 let menuOpen = false;
 let worker = null;
+let computerMoveTimer = null;
 let requestSerial = 0;
 let startingGame = false;
 let startError = "";
@@ -81,6 +87,10 @@ function persist() {
 }
 
 function stopWorker() {
+  if (computerMoveTimer !== null) {
+    clearTimeout(computerMoveTimer);
+    computerMoveTimer = null;
+  }
   worker?.terminate();
   worker = null;
   requestSerial += 1;
@@ -255,7 +265,15 @@ function latticeSvg() {
     </svg>`;
 }
 
-function boardMarkup({ board, legal = [], action, bestMove = null, changed = [] }) {
+function boardMarkup({
+  board,
+  legal = [],
+  action,
+  bestMove = null,
+  changed = [],
+  lastMove = null,
+  forcedPass = false,
+}) {
   const legalSet = new Set(legal.map(({ move }) => move));
   const changedSet = new Set(changed);
   return `
@@ -269,8 +287,10 @@ function boardMarkup({ board, legal = [], action, bestMove = null, changed = [] 
             ${square ? `<span class="disc ${square === BLACK ? "black" : "white"}${changedSet.has(index) ? " changed" : ""}" aria-hidden="true"></span>` : ""}
             ${isLegal ? '<span class="legal-marker" aria-hidden="true"></span>' : ""}
             ${bestMove === index ? '<span class="best-marker" aria-hidden="true"></span>' : ""}
+            ${lastMove === index ? '<span class="last-move-marker" aria-hidden="true"></span>' : ""}
           </button>`;
       }).join("")}
+      ${forcedPass ? '<button type="button" class="pass-button" data-action="pass">Pass</button>' : ""}
     </div>`;
 }
 
@@ -305,6 +325,25 @@ function menuMarkup(mode) {
       </div>` : ""}`;
 }
 
+function playHeaderMarkup() {
+  return `
+    <header class="play-header">
+      <div class="play-brand" aria-label="Othello">
+        <img src="assets/sb-mark.png" width="24" height="24" alt="">
+        <span>Othello</span>
+      </div>
+      <div class="play-menu">${menuMarkup("play")}</div>
+    </header>`;
+}
+
+function playFooterMarkup() {
+  return `
+    <footer class="play-footer">
+      <span>© 2026 SB</span>
+      <a href="https://github.com/barasch/othello/blob/main/LICENSE">CC BY-SA 4.0</a>
+    </footer>`;
+}
+
 function resultDialog() {
   if (!game?.completed || !game.record) return "";
   const { black, white } = game.record.counts;
@@ -324,13 +363,24 @@ function resultDialog() {
 
 function renderPlay() {
   const humanTurn = !game.completed && !game.thinking && game.side === game.humanColor;
-  const legal = humanTurn ? legalMoves(game.board, game.side) : [];
+  const forcedPass = humanTurn && game.mustPass;
+  const legal = humanTurn && !forcedPass ? legalMoves(game.board, game.side) : [];
   app.innerHTML = `
     <main class="game-screen${game.thinking ? " thinking" : ""}">
-      ${menuMarkup("play")}
-      <div class="play-surface">
-        ${boardMarkup({ board: game.board, legal, action: "play-move", changed: game.changed })}
-        ${occupancyMarkup(game.board)}
+      <div class="play-frame">
+        ${playHeaderMarkup()}
+        <div class="play-surface">
+          ${boardMarkup({
+            board: game.board,
+            legal,
+            action: "play-move",
+            changed: game.changed,
+            lastMove: game.lastMove,
+            forcedPass,
+          })}
+          ${occupancyMarkup(game.board)}
+        </div>
+        ${playFooterMarkup()}
       </div>
       ${resultDialog()}
     </main>`;
@@ -371,8 +421,10 @@ async function beginGame() {
     moves: position.events,
     startedAt: new Date().toISOString(),
     thinking: false,
+    mustPass: false,
     completed: false,
     changed: [],
+    lastMove: lastPlacement(position.events),
     record: null,
   };
   startingGame = false;
@@ -401,6 +453,7 @@ function finishGame() {
   };
   game.completed = true;
   game.thinking = false;
+  game.mustPass = false;
   game.record = record;
   persisted = storeGame(persisted, record);
   stopWorker();
@@ -417,18 +470,34 @@ function performGameMove(move, side) {
   game.board = next;
   game.moves.push({ side, move });
   game.changed = [move, ...flips];
-  const advance = advanceAfterMove(game.board, side);
-  if (advance.passedSide !== null) {
-    game.moves.push({ side: advance.passedSide, move: PASS });
-    announce(`${sideName(advance.passedSide)} has no legal move and passes.`);
-  }
-  game.side = advance.nextSide;
-  if (advance.gameOver) {
+  game.lastMove = move;
+  const turn = resolveTurnAfterPlacement(game.board, side, game.humanColor);
+  game.side = turn.nextSide;
+  game.mustPass = turn.humanMustPass;
+  if (turn.automaticPass) game.moves.push(turn.automaticPass);
+  if (turn.gameOver) {
     finishGame();
     return;
   }
   renderPlay();
+  if (turn.humanMustPass) {
+    announce("You have no legal move. Pass to continue.");
+    requestAnimationFrame(() => document.querySelector('[data-action="pass"]')?.focus());
+    return;
+  }
+  if (turn.automaticPass) announce(`${sideName(turn.automaticPass.side)} has no legal move and passes.`);
   if (game.side !== game.humanColor) beginComputerMove();
+}
+
+function performHumanPass() {
+  if (!game || game.completed || game.thinking || !game.mustPass || game.side !== game.humanColor) return;
+  if (legalMoves(game.board, game.humanColor).length) return;
+  game.moves.push({ side: game.humanColor, move: PASS });
+  game.mustPass = false;
+  game.side = opponent(game.humanColor);
+  renderPlay();
+  announce("You pass. The computer is calculating.");
+  beginComputerMove();
 }
 
 function beginComputerMove() {
@@ -439,18 +508,29 @@ function beginComputerMove() {
   announce(`${sideName(game.side)} is calculating.`);
   const requestId = ++requestSerial;
   const side = game.side;
+  const earliestMoveAt = performance.now() + COMPUTER_MOVE_DELAY_MS;
   worker = new Worker(new URL("./ai.worker.js", import.meta.url), { type: "module" });
   worker.addEventListener("message", ({ data }) => {
     if (data?.type !== "move" || data.requestId !== requestId || screen !== "play" || !game) return;
-    stopWorker();
-    game.thinking = false;
-    if (data.result.move === PASS) {
-      game.moves.push({ side, move: PASS });
-      game.side = side === BLACK ? WHITE : BLACK;
-      renderPlay();
-      return;
-    }
-    performGameMove(data.result.move, side);
+    worker?.terminate();
+    worker = null;
+    const applyComputerMove = () => {
+      computerMoveTimer = null;
+      if (data.requestId !== requestSerial || screen !== "play" || !game) return;
+      game.thinking = false;
+      if (data.result.move === PASS) {
+        game.moves.push({ side, move: PASS });
+        game.side = opponent(side);
+        game.mustPass = false;
+        if (isTerminal(game.board)) finishGame();
+        else renderPlay();
+        return;
+      }
+      performGameMove(data.result.move, side);
+    };
+    const remainingDelay = Math.max(0, earliestMoveAt - performance.now());
+    if (remainingDelay > 0) computerMoveTimer = setTimeout(applyComputerMove, remainingDelay);
+    else applyComputerMove();
   });
   worker.addEventListener("error", () => {
     stopWorker();
@@ -655,6 +735,7 @@ app.addEventListener("click", (event) => {
   if (action === "play-move" && game && !game.thinking && game.side === game.humanColor) {
     performGameMove(Number(control.dataset.move), game.humanColor);
   }
+  if (action === "pass") performHumanPass();
   if (action === "toggle-menu") {
     menuOpen = !menuOpen;
     screen === "play" ? renderPlay() : renderAnalysis();

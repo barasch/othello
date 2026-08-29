@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "test": "node --test",
-    "check": "node --check site/js/app.js && node --check site/js/ai.worker.js && node --check site/js/openings.js",
+    "check": "node --check site/js/app.js && node --check site/js/ai.worker.js && node --check site/js/openings.js && node --check site/js/play.js",
     "build": "node scripts/build.mjs"
   },
   "engines": {

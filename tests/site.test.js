@@ -9,6 +9,14 @@ test("the static entry point identifies the game and loads the module app", asyn
   assert.match(html, /meta name="viewport"/);
 });
 
+test("the play surface includes its aligned frame and forced-pass control", async () => {
+  const app = await readFile(new URL("../site/js/app.js", import.meta.url), "utf8");
+  assert.match(app, /class="play-header"/);
+  assert.match(app, /class="play-footer"/);
+  assert.match(app, /data-action="pass"/);
+  assert.match(app, /last-move-marker/);
+});
+
 test("the rules page credits the engine source and trademark owner", async () => {
   const html = await readFile(new URL("../site/rules.html", import.meta.url), "utf8");
   assert.match(html, /Roemer B\. Lievaart/);
