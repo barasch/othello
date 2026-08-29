@@ -11,6 +11,17 @@ The search engine in `site/js/engine.js` is adapted from Roemer B. Lievaart’s 
 
 The JavaScript adaptation is substantially reformatted and adds principal-variation retention, multiple root lines, progressive analysis messages, browser coordinates, and explicit draw handling. Its retained search ideas are described in the project README.
 
+## XOT opening list
+
+The site bundles the large XOT opening list compiled by Matthias Berg and Borja Moreno using Edax and NTest. It contains 10,784 eight-move sequences intended to produce balanced starting positions.
+
+- About and attribution: <https://berg.earthlingz.de/xot/aboutxot.php?lang=en>
+- Source file: <https://berg.earthlingz.de/xot/downloads/openingslarge.txt>
+- Retrieved: 2026-08-29
+- SHA-256: `ccbeb0ed7b7ae23de20013a3992b9a6ede77610bbb5cacda82ccbaedaab72530`
+
+The source site makes the list available for download and use but does not state a separate license for the list. It remains attributed to its creators and source; its inclusion here does not alter any rights they retain.
+
 ## ET Book
 
 The site includes the ET Book roman line-figures webfont from Edward Tufte’s ET Book repository.

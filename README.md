@@ -2,7 +2,7 @@
 
 A small browser Othello game and analysis surface. It uses an 8×8 lattice rather than a rendered board, a device-local game record, and a computer player adapted from Roemer B. Lievaart’s 1987 IOCCC entry.
 
-The Play screen supports computer levels 1–10 and lets the player choose Black, White, or a random color. Analysis can step through recorded and hypothetical lines, branch from earlier positions, show up to three principal variations, and calculate progressively through level 6 in this first build.
+The Play screen supports computer levels 1–10 and lets the player choose Black, White, or a random color. A game can use the standard position or begin from a randomly selected XOT eight-move opening. Analysis can step through recorded and hypothetical lines, branch from earlier positions, show up to three principal variations, and calculate progressively through level 6 in this first build.
 
 ## Run locally
 
@@ -34,7 +34,7 @@ The adaptation adds a principal-variation table, full root scoring for multiple 
 
 ## Storage and privacy
 
-Settings, completed games, and analysis branches are stored only in the browser’s local storage. The site has no backend, account, analytics, cookies, advertising, or network requests after its static assets load.
+Settings, completed games, and analysis branches are stored only in the browser’s local storage. The site has no backend, account, analytics, cookies, advertising, or third-party requests. The bundled XOT list is loaded from the same site only when an XOT game starts.
 
 ## License and notices
 

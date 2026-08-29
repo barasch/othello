@@ -217,6 +217,8 @@ fieldset legend {
   grid-template-columns: repeat(3, 1fr);
 }
 
+.segmented.two-way { grid-template-columns: repeat(2, 1fr); }
+
 .segmented label { position: relative; }
 
 .segmented input {
@@ -278,6 +280,23 @@ fieldset legend {
 }
 
 .primary-action:hover { background: var(--accent); border-color: var(--accent); }
+
+.primary-action:disabled,
+.start-tabs button:disabled {
+  cursor: wait;
+  opacity: 0.62;
+}
+
+.setting-note,
+.start-error {
+  font-family: var(--sans);
+  font-size: 0.68rem;
+  line-height: 1.4;
+  margin: 9px 0 0;
+}
+
+.setting-note { color: var(--muted); }
+.start-error { color: var(--accent); text-align: center; }
 
 .recent-section {
   border-top: 1px solid var(--rule);

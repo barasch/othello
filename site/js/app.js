@@ -14,6 +14,7 @@ import {
   sideName,
 } from "./rules.js";
 import { formatLine } from "./engine.js";
+import { parseXotList, prepareXotOpening } from "./openings.js";
 import {
   addVariation,
   createAnalysisTree,
@@ -45,6 +46,9 @@ let analysisResult = null;
 let menuOpen = false;
 let worker = null;
 let requestSerial = 0;
+let startingGame = false;
+let startError = "";
+let xotOpeningsPromise = null;
 
 function escapeHtml(value) {
   return String(value)
@@ -82,16 +86,43 @@ function stopWorker() {
   requestSerial += 1;
 }
 
+function randomIndex(length) {
+  if (!Number.isSafeInteger(length) || length < 1) throw new Error("Cannot choose from an empty list");
+  if (!globalThis.crypto?.getRandomValues) return Math.floor(Math.random() * length);
+
+  const range = 0x1_0000_0000;
+  const limit = range - (range % length);
+  const value = new Uint32Array(1);
+  do globalThis.crypto.getRandomValues(value);
+  while (value[0] >= limit);
+  return value[0] % length;
+}
+
 function randomColor() {
-  const value = new Uint8Array(1);
-  globalThis.crypto?.getRandomValues?.(value);
-  return value[0] % 2 === 0 ? BLACK : WHITE;
+  return randomIndex(2) === 0 ? BLACK : WHITE;
 }
 
 function selectedPlayerColor() {
   if (persisted.playSettings.color === "black") return BLACK;
   if (persisted.playSettings.color === "white") return WHITE;
   return randomColor();
+}
+
+function loadXotOpenings() {
+  if (!xotOpeningsPromise) {
+    const url = new URL("../data/openingslarge.txt", import.meta.url);
+    xotOpeningsPromise = fetch(url)
+      .then((response) => {
+        if (!response.ok) throw new Error(`Opening list returned ${response.status}`);
+        return response.text();
+      })
+      .then(parseXotList)
+      .catch((error) => {
+        xotOpeningsPromise = null;
+        throw error;
+      });
+  }
+  return xotOpeningsPromise;
 }
 
 function formatDate(value) {
@@ -115,7 +146,7 @@ function recentGameRows(action) {
         <li>
           <button type="button" class="recent-game" data-action="${action}" data-game-id="${escapeHtml(record.id)}">
             <span class="recent-result">${scoreForGame(record)}</span>
-            <span class="recent-meta">${formatDate(record.playedAt)} · Level ${record.difficulty} · played ${sideName(record.playerColor)}</span>
+            <span class="recent-meta">${formatDate(record.playedAt)} · Level ${record.difficulty} · played ${sideName(record.playerColor)}${record.opening === "xot" ? " · XOT" : ""}</span>
           </button>
         </li>
       `).join("")}
@@ -146,8 +177,8 @@ function renderStart() {
         </header>
 
         <div class="start-tabs" role="tablist" aria-label="Choose a mode">
-          <button type="button" role="tab" aria-selected="${tab === "play"}" aria-controls="play-panel" id="play-tab" data-action="tab" data-tab="play">Play</button>
-          <button type="button" role="tab" aria-selected="${tab === "analysis"}" aria-controls="analysis-panel" id="analysis-tab" data-action="tab" data-tab="analysis">Analysis</button>
+          <button type="button" role="tab" aria-selected="${tab === "play"}" aria-controls="play-panel" id="play-tab" data-action="tab" data-tab="play" ${startingGame ? "disabled" : ""}>Play</button>
+          <button type="button" role="tab" aria-selected="${tab === "analysis"}" aria-controls="analysis-panel" id="analysis-tab" data-action="tab" data-tab="analysis" ${startingGame ? "disabled" : ""}>Analysis</button>
         </div>
 
         <div class="tab-paper">
@@ -165,8 +196,20 @@ function renderStart() {
                       </label>`).join("")}
                   </div>
                 </fieldset>
+                <fieldset class="opening-setting">
+                  <legend>Opening</legend>
+                  <div class="segmented two-way">
+                    ${["standard", "xot"].map((opening) => `
+                      <label>
+                        <input type="radio" name="opening" value="${opening}" data-setting="opening" ${persisted.playSettings.opening === opening ? "checked" : ""}>
+                        <span>${opening === "xot" ? "XOT" : "Standard"}</span>
+                      </label>`).join("")}
+                  </div>
+                  <p class="setting-note">XOT chooses a balanced eight-move position at random.</p>
+                </fieldset>
               </div>
-              <button type="button" class="primary-action" data-action="start-game">Start</button>
+              <button type="button" class="primary-action" data-action="start-game" ${startingGame ? 'disabled aria-busy="true"' : ""}>${startingGame ? "Starting…" : "Start"}</button>
+              ${startError ? `<p class="start-error" role="alert">${escapeHtml(startError)}</p>` : ""}
               <section class="recent-section" aria-labelledby="recent-play-title">
                 <h2 id="recent-play-title">Previous scores</h2>
                 ${recentGameRows("open-game-analysis")}
@@ -293,26 +336,51 @@ function renderPlay() {
     </main>`;
 }
 
-function beginGame() {
+async function beginGame() {
+  if (startingGame) return;
   stopWorker();
   const humanColor = selectedPlayerColor();
+  const difficulty = persisted.playSettings.difficulty;
+  const opening = persisted.playSettings.opening;
+  startingGame = true;
+  startError = "";
+  renderStart();
+
+  let position = { board: initialBoard(), side: BLACK, events: [], sequence: null };
+  try {
+    if (opening === "xot") {
+      const openings = await loadXotOpenings();
+      position = prepareXotOpening(openings[randomIndex(openings.length)], humanColor);
+    }
+  } catch {
+    startingGame = false;
+    startError = "The XOT opening list could not be loaded. Please try again.";
+    renderStart();
+    announce(startError);
+    requestAnimationFrame(() => document.querySelector('[data-action="start-game"]')?.focus());
+    return;
+  }
+
   game = {
-    board: initialBoard(),
-    side: BLACK,
+    board: position.board,
+    side: position.side,
     humanColor,
-    difficulty: persisted.playSettings.difficulty,
-    moves: [],
+    difficulty,
+    opening,
+    openingSequence: position.sequence,
+    moves: position.events,
     startedAt: new Date().toISOString(),
     thinking: false,
     completed: false,
     changed: [],
     record: null,
   };
+  startingGame = false;
   screen = "play";
   menuOpen = false;
   renderPlay();
-  announce(`New game. You are ${sideName(humanColor)}.`);
-  if (humanColor === WHITE) beginComputerMove();
+  announce(`New ${opening === "xot" ? "XOT " : ""}game. You are ${sideName(humanColor)}.`);
+  if (game.side !== humanColor) beginComputerMove();
 }
 
 function finishGame() {
@@ -325,6 +393,8 @@ function finishGame() {
     playedAt: new Date().toISOString(),
     difficulty: game.difficulty,
     playerColor: game.humanColor,
+    opening: game.opening,
+    openingSequence: game.openingSequence,
     result,
     counts: { black: counts.black, white: counts.white },
     moves: game.moves.slice(),
@@ -399,6 +469,8 @@ function showStart(tab = persisted.activeTab) {
   analysisTree = null;
   analysisResult = null;
   menuOpen = false;
+  startingGame = false;
+  startError = "";
   persisted.activeTab = tab;
   persist();
   renderStart();
@@ -559,6 +631,7 @@ app.addEventListener("input", (event) => {
     document.querySelector("#analysis-level-output").value = input.value;
   }
   if (setting === "color") persisted.playSettings.color = input.value;
+  if (setting === "opening") persisted.playSettings.opening = input.value;
   if (setting === "analysis-lines") persisted.analysisSettings.lines = Number(input.value);
   persist();
 });
@@ -573,7 +646,7 @@ app.addEventListener("click", (event) => {
     persist();
     renderStart();
   }
-  if (action === "start-game") beginGame();
+  if (action === "start-game") void beginGame();
   if (action === "new-analysis") openAnalysis();
   if (action === "open-game-analysis") {
     const record = gameById(persisted, control.dataset.gameId);

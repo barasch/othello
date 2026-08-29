@@ -9,7 +9,7 @@ export const DEFAULT_STATE = Object.freeze({
   version: 1,
   theme: "system",
   activeTab: "play",
-  playSettings: { difficulty: 5, color: "random" },
+  playSettings: { difficulty: 5, color: "random", opening: "standard" },
   analysisSettings: { level: 4, lines: 1 },
   games: [],
   analyses: [],
@@ -28,17 +28,25 @@ function normalizeMove(event) {
   return { side: event.side, move };
 }
 
+function normalizeOpeningSequence(value) {
+  const sequence = String(value ?? "").trim().toLowerCase();
+  return /^(?:[a-h][1-8]){1,8}$/.test(sequence) ? sequence : null;
+}
+
 function normalizeGame(game) {
   if (!game || typeof game !== "object" || !Array.isArray(game.moves)) return null;
   const moves = game.moves.map(normalizeMove).filter(Boolean);
   const playerColor = game.playerColor === WHITE ? WHITE : BLACK;
   const black = integerBetween(game.counts?.black, 0, 64, 2);
   const white = integerBetween(game.counts?.white, 0, 64, 2);
+  const opening = game.opening === "xot" ? "xot" : "standard";
   return {
     id: String(game.id || `${Date.now()}`),
     playedAt: String(game.playedAt || new Date().toISOString()),
     difficulty: integerBetween(game.difficulty, 1, 10, 5),
     playerColor,
+    opening,
+    openingSequence: opening === "xot" ? normalizeOpeningSequence(game.openingSequence) : null,
     result: ["win", "loss", "draw"].includes(game.result) ? game.result : "draw",
     counts: { black, white },
     moves,
@@ -50,6 +58,7 @@ export function normalizeState(value) {
   const color = ["black", "random", "white"].includes(source.playSettings?.color)
     ? source.playSettings.color
     : DEFAULT_STATE.playSettings.color;
+  const opening = source.playSettings?.opening === "xot" ? "xot" : "standard";
   const games = Array.isArray(source.games) ? source.games.map(normalizeGame).filter(Boolean) : [];
   const analyses = Array.isArray(source.analyses) ? source.analyses.map(normalizeTree).filter(Boolean) : [];
   return {
@@ -59,6 +68,7 @@ export function normalizeState(value) {
     playSettings: {
       difficulty: integerBetween(source.playSettings?.difficulty, 1, 10, DEFAULT_STATE.playSettings.difficulty),
       color,
+      opening,
     },
     analysisSettings: {
       level: integerBetween(source.analysisSettings?.level, 1, 6, DEFAULT_STATE.analysisSettings.level),

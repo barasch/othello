@@ -13,4 +13,5 @@ test("the rules page credits the engine source and trademark owner", async () =>
   const html = await readFile(new URL("../site/rules.html", import.meta.url), "utf8");
   assert.match(html, /Roemer B\. Lievaart/);
   assert.match(html, /Othello is a trademark/);
+  assert.match(html, /Berg–Moreno opening list/);
 });
