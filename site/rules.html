@@ -3,12 +3,13 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="description" content="Rules and elementary strategy for Othello.">
+    <meta name="description" content="Rules, strategy, and the calibrated analysis index for Othello.">
     <meta name="theme-color" content="#fffff8">
-    <title>Rules &amp; strategy · Othello</title>
+    <title>Rules, strategy, &amp; engine · Othello</title>
     <link rel="icon" type="image/png" href="assets/sb-mark.png">
     <link rel="preload" href="assets/et-book.woff" as="font" type="font/woff" crossorigin>
     <link rel="stylesheet" href="styles.css">
+    <script type="module" src="js/note-theme.js"></script>
   </head>
   <body class="reading-body">
     <header class="reading-header">
@@ -19,7 +20,7 @@
       <article>
         <header>
           <p class="eyebrow">Reference</p>
-          <h1>Rules &amp; strategy</h1>
+          <h1>Rules, strategy, &amp; engine</h1>
           <p class="subtitle">A short field guide.</p>
         </header>
 
@@ -39,6 +40,43 @@
         <section>
           <h2>Openings</h2>
           <p><span class="newthought">Standard begins with four discs.</span> XOT instead chooses one balanced eight-move position at random from the large opening list compiled by Matthias Berg and Borja Moreno. If that sequence would leave White to move when the player chose Black, its final move is omitted.</p>
+        </section>
+
+        <section id="evaluation">
+          <h2>Analysis</h2>
+          <p>The analysis method was developed to express the engine’s evaluations on a common outcome scale across game phases. The underlying search was adapted from Roemer B. Lievaart’s <a href="https://www.ioccc.org/1987/lievaart/index.html">1987 International Obfuscated C Code Contest entry</a>, with <a href="https://hewgill.com/othello/">Greg Hewgill’s browser implementation</a> as an additional reference. A fixed conversion of its heuristic scores into disc margins was rejected because those scores have no established proportional relationship to final disc counts.</p>
+          <p>Michael Buro’s <a href="https://arxiv.org/abs/cs/9512106">“Statistical Feature Combination for the Evaluation of Game Positions” (1995)</a> provided a precedent for statistically estimated Othello evaluations with a meaning independent of game phase. The <a href="https://github.com/official-stockfish/WDL_model">Stockfish win/draw/loss model (consulted September 2026)</a> supplied the more direct model: a logistic relationship between search evaluation and win frequency, with a symmetric loss probability and parameters that vary with game phase. The present implementation fits that relationship to this engine’s scores and Othello outcomes; it does not use Stockfish’s fitted coefficients.</p>
+          <p>The selected measure is <em>net outcome advantage</em>: 100 times the estimated probability of a Black win minus the estimated probability of a White win. Positive values are displayed as “Black +…”, negative values as “White +…”. The index is neither a disc margin nor a win percentage. Equal win probabilities yield zero, whether draws are common or rare.</p>
+          <p>Calibration used 256 reference games generated with seed 20260917. Half began from standard positions and half from randomly selected XOT openings; each received a further 1–24 random legal placements. <a href="https://github.com/abulmo/edax-reversi/releases/tag/v4.6">Edax 4.6 (2024)</a> then played both sides to completion at level 12, with one search task and its opening book disabled. Sampled positions were labeled with the resulting win, draw, or loss. These labels describe the reference continuations, rather than establishing the result under perfect play.</p>
+          <p>After duplicate board-and-turn positions were removed, the sample contained 1,999 positions. Every fifth reference game was withheld, producing 52 validation games; all retained positions from a game remained in the same partition. The browser engine evaluated the positions at each of its six analysis levels. Results already established by search were excluded from statistical fitting. A separate model was fitted at each level, with parameters varying continuously with board occupancy.</p>
+          <p>Each model has six coefficients. They were estimated by minimizing mean negative log likelihood over the training positions, with a penalty of 0.001 times the sum of squared nonconstant coefficients. Bounded numerical optimization used three starting points and retained the fit with the lowest penalized training loss. Validation positions were not used to estimate coefficients. Across levels 1–6, validation logarithmic loss was 0.666–0.705, compared with 0.846–0.855 for the training-set outcome-frequency baseline. Some middle index bands nevertheless showed substantial differences between predicted and observed outcomes. Positions within games are correlated, and the reference sample does not represent every player’s games. Conversion of alternative move evaluations uses the same model, although those individual moves were not separately followed to completion for calibration. The <a href="https://github.com/barasch/othello/tree/main/calibration">data, reproduction instructions, and validation report</a> accompany the source.</p>
+          <p>For the fitted function, let <i>s</i> denote the search score from Black’s perspective, <i>n</i> the number of empty squares, and <i>d</i> the completed analysis level. Define game phase <i>t</i> = (60 − <i>n</i>)/60 and the logistic function σ(<i>x</i>) = 1/(1 + exp(−<i>x</i>)). The positive threshold <i>a</i><sub>d</sub> and scale <i>b</i><sub>d</sub> are defined by the fitted coefficients α and β:</p>
+          <div class="analysis-formula">
+            <div><i>a</i><sub>d</sub>(<i>t</i>) = exp(α<sub>d0</sub> + α<sub>d1</sub><i>t</i> + α<sub>d2</sub><i>t</i><sup>2</sup>)</div>
+            <div><i>b</i><sub>d</sub>(<i>t</i>) = exp(β<sub>d0</sub> + β<sub>d1</sub><i>t</i> + β<sub>d2</sub><i>t</i><sup>2</sup>)</div>
+          </div>
+          <p>The estimated probabilities of a Black win, White win, and draw are denoted by <i>p</i><sub>B</sub>, <i>p</i><sub>W</sub>, and <i>p</i><sub>D</sub>, respectively. The resulting signed index is <i>A</i><sub>d</sub>:</p>
+          <div class="analysis-formula">
+            <div><i>p</i><sub>B</sub> = σ((<i>s</i> − <i>a</i><sub>d</sub>(<i>t</i>))/<i>b</i><sub>d</sub>(<i>t</i>))</div>
+            <div><i>p</i><sub>W</sub> = σ((−<i>s</i> − <i>a</i><sub>d</sub>(<i>t</i>))/<i>b</i><sub>d</sub>(<i>t</i>))</div>
+            <div><i>p</i><sub>D</sub> = 1 − <i>p</i><sub>B</sub> − <i>p</i><sub>W</sub></div>
+            <div><i>A</i><sub>d</sub>(<i>s</i>, <i>t</i>) = 100(<i>p</i><sub>B</sub> − <i>p</i><sub>W</sub>)</div>
+          </div>
+          <div class="coefficient-table" role="region" aria-label="Fitted coefficients" tabindex="0">
+            <table>
+              <caption>Fitted coefficients, rounded to four decimal places</caption>
+              <thead><tr><th scope="col"><i>d</i></th><th scope="col">α<sub>d0</sub></th><th scope="col">α<sub>d1</sub></th><th scope="col">α<sub>d2</sub></th><th scope="col">β<sub>d0</sub></th><th scope="col">β<sub>d1</sub></th><th scope="col">β<sub>d2</sub></th></tr></thead>
+              <tbody>
+                <tr><th scope="row">1</th><td>1.8468</td><td>0.9032</td><td>0.9377</td><td>3.9989</td><td>1.1633</td><td>1.3035</td></tr>
+                <tr><th scope="row">2</th><td>1.8882</td><td>0.9037</td><td>0.8972</td><td>4.0478</td><td>1.1272</td><td>1.3629</td></tr>
+                <tr><th scope="row">3</th><td>1.9084</td><td>0.9007</td><td>0.8914</td><td>4.0389</td><td>1.1526</td><td>1.3107</td></tr>
+                <tr><th scope="row">4</th><td>1.9261</td><td>0.9145</td><td>0.9104</td><td>4.0461</td><td>1.1424</td><td>1.3633</td></tr>
+                <tr><th scope="row">5</th><td>1.9555</td><td>0.8695</td><td>0.8040</td><td>4.0871</td><td>1.1138</td><td>1.2568</td></tr>
+                <tr><th scope="row">6</th><td>1.9614</td><td>0.8851</td><td>0.8254</td><td>4.0921</td><td>1.0897</td><td>1.3366</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p>The implementation uses the <a href="https://github.com/barasch/othello/blob/main/site/js/calibration-model.js">full-precision coefficients</a>. Positive thresholds and scales ensure nonnegative outcome probabilities whose sum is one. Reversing the score’s sign reverses the index; increasing the score increases the index at a fixed phase and analysis level.</p>
         </section>
 
         <footer class="reading-notes">

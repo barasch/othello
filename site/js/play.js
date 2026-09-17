@@ -33,3 +33,9 @@ export function resolveTurnAfterPlacement(board, sideThatMoved, humanColor) {
     automaticPass,
   };
 }
+
+export const DIFFICULTY_LEVELS = [null, null, 1, 4, 7, 10];
+export function engineLevel(difficulty) { return DIFFICULTY_LEVELS[difficulty] ?? null; }
+export function randomLegalMove(moves, random = Math.random) {
+  return moves.length ? moves[Math.min(moves.length - 1, Math.floor(random() * moves.length))].move : PASS;
+}

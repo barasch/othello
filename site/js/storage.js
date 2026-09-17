@@ -1,15 +1,17 @@
 import { BLACK, WHITE, PASS } from "./rules.js";
 import { normalizeTree } from "./tree.js";
 
-const STORAGE_KEY = "sb.othello.v1";
+const STORAGE_KEY = "sb.othello.v2";
 const MAX_GAMES = 50;
 const MAX_ANALYSES = 20;
 
 export const DEFAULT_STATE = Object.freeze({
-  version: 1,
+  version: 2,
   theme: "system",
+  tiles: "black-white",
+  palette: 0,
   activeTab: "play",
-  playSettings: { difficulty: 5, color: "random", opening: "standard" },
+  playSettings: { difficulty: 3, color: "random", opening: "standard" },
   analysisSettings: { level: 4, lines: 1 },
   games: [],
   analyses: [],
@@ -43,7 +45,7 @@ function normalizeGame(game) {
   return {
     id: String(game.id || `${Date.now()}`),
     playedAt: String(game.playedAt || new Date().toISOString()),
-    difficulty: integerBetween(game.difficulty, 1, 10, 5),
+    difficulty: integerBetween(game.difficulty, 1, 5, 5),
     playerColor,
     opening,
     openingSequence: opening === "xot" ? normalizeOpeningSequence(game.openingSequence) : null,
@@ -62,11 +64,13 @@ export function normalizeState(value) {
   const games = Array.isArray(source.games) ? source.games.map(normalizeGame).filter(Boolean) : [];
   const analyses = Array.isArray(source.analyses) ? source.analyses.map(normalizeTree).filter(Boolean) : [];
   return {
-    version: 1,
+    version: 2,
     theme: ["system", "light", "dark"].includes(source.theme) ? source.theme : DEFAULT_STATE.theme,
+    tiles: source.tiles === "colors" ? "colors" : "black-white",
+    palette: integerBetween(source.palette, 0, 3, 0),
     activeTab: source.activeTab === "analysis" ? "analysis" : "play",
     playSettings: {
-      difficulty: integerBetween(source.playSettings?.difficulty, 1, 10, DEFAULT_STATE.playSettings.difficulty),
+      difficulty: integerBetween(source.playSettings?.difficulty, 1, 5, DEFAULT_STATE.playSettings.difficulty),
       color,
       opening,
     },

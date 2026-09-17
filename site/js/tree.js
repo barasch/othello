@@ -138,7 +138,7 @@ export function addVariation(tree, move) {
   if (advance.passedSide !== null) {
     node = addChild(tree, node, PASS, advance.passedSide, "analysis");
   }
-  tree.currentNodeId = node.id;
+  selectNode(tree, node.id);
   tree.updatedAt = new Date().toISOString();
   return node;
 }
@@ -146,6 +146,9 @@ export function addVariation(tree, move) {
 export function selectNode(tree, nodeId) {
   if (!tree.nodes[nodeId]) return false;
   tree.currentNodeId = nodeId;
+  for (const node of pathToNode(tree, nodeId)) {
+    if (tree.nodes[node.parentId]) tree.nodes[node.parentId].preferredChildId = node.id;
+  }
   tree.updatedAt = new Date().toISOString();
   return true;
 }

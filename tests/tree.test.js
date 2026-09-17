@@ -34,7 +34,11 @@ test("an alternative move creates a branch without replacing the played line", (
   const variation = addVariation(tree, 26);
   assert.equal(variation.source, "analysis");
   assert.equal(tree.nodes.root.children.length, 2);
-  assert.equal(tree.nodes.root.preferredChildId, playedFirst);
+  assert.ok(tree.nodes.root.children.includes(playedFirst));
+  assert.equal(tree.nodes.root.preferredChildId, variation.id);
+  navigateTree(tree, "previous");
+  navigateTree(tree, "next");
+  assert.equal(tree.currentNodeId, variation.id);
 });
 
 test("navigation follows parents and preferred children", () => {

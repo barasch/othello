@@ -929,3 +929,27 @@ fieldset legend {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* September update: counts, previews, and appearance. */
+.square.legal:hover .legal-marker { opacity: 0; transform: none; }
+.hover-disc { display: none; position: absolute; width: 72%; aspect-ratio: 1; border-radius: 50%; opacity: 0.45; pointer-events: none; }
+.board[data-preview-color="black"] .hover-disc { background: var(--disc-black); border: 2px solid var(--disc-white); }
+.board[data-preview-color="white"] .hover-disc { background: var(--disc-white); border: 2px solid var(--disc-black); }
+@media (hover: hover) { .square.legal:hover .hover-disc { display: block; } }
+@media (hover: none) { .square.legal:hover .legal-marker { opacity: 0.22; } }
+.occupancy { border: 0; justify-content: center; overflow: visible; }
+.occupancy-stack { display: flex; flex-direction: column; justify-content: center; height: 100%; }
+.occupancy .occupancy-stack > span { height: calc(100% / 64); flex: 0 0 calc(100% / 64); background: transparent; padding: 1px 0; }
+.occupancy .occupancy-stack > span::before { content: ""; display: block; width: 100%; height: 100%; box-sizing: border-box; }
+.occupancy-white::before { background: var(--disc-white); border-inline: 1px solid var(--disc-black); }
+.occupancy-black::before { background: var(--disc-black); border-inline: 1px solid var(--disc-white); }
+.computer-pass { cursor: default; white-space: nowrap; }
+.tile-options { grid-template-columns: 1fr 1fr; }
+.calculated-lines li { grid-template-columns: 82px 1fr; }
+.analysis-value a { color: inherit; text-decoration: underline; text-decoration-color: var(--rule); text-underline-offset: 3px; }
+.analysis-formula { font-size: 1.15rem; line-height: 1.9; margin: 1.2rem 0; }
+.coefficient-table { overflow-x: auto; margin: 1.5rem 0; }
+.coefficient-table table { border-collapse: collapse; width: 100%; font-size: 0.85rem; font-variant-numeric: tabular-nums; }
+.coefficient-table caption { text-align: left; font-size: 0.95rem; margin-bottom: 0.7rem; }
+.coefficient-table th, .coefficient-table td { text-align: right; padding: 0.35rem 0.45rem; border-bottom: 1px solid var(--rule); white-space: nowrap; }
+.coefficient-table th:first-child { text-align: left; }

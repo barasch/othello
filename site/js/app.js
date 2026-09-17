@@ -13,10 +13,14 @@ import {
   resultText,
   sideName,
 } from "./rules.js";
+import { tileColors, PALETTES } from "./appearance.js";
+import { outcomeIndex, formatAdvantage } from "./calibration.js";
 import { formatLine } from "./engine.js";
 import { parseXotList, prepareXotOpening } from "./openings.js";
 import {
   COMPUTER_MOVE_DELAY_MS,
+  engineLevel,
+  randomLegalMove,
   lastPlacement,
   resolveTurnAfterPlacement,
 } from "./play.js";
@@ -49,6 +53,8 @@ let game = null;
 let analysisTree = null;
 let analysisResult = null;
 let menuOpen = false;
+let menuPage = "main";
+let passTimer = null;
 let worker = null;
 let computerMoveTimer = null;
 let requestSerial = 0;
@@ -75,6 +81,9 @@ function announce(message) {
 }
 
 function applyTheme() {
+  const colors = tileColors(persisted.tiles, persisted.palette);
+  document.documentElement.style.setProperty("--disc-black", colors.dark);
+  document.documentElement.style.setProperty("--disc-white", colors.light);
   if (persisted.theme === "system") delete document.documentElement.dataset.theme;
   else document.documentElement.dataset.theme = persisted.theme;
   const dark = persisted.theme === "dark" || (persisted.theme === "system" && prefersDark.matches);
@@ -87,6 +96,7 @@ function persist() {
 }
 
 function stopWorker() {
+  if (passTimer !== null) { clearTimeout(passTimer); passTimer = null; }
   if (computerMoveTimer !== null) {
     clearTimeout(computerMoveTimer);
     computerMoveTimer = null;
@@ -195,7 +205,7 @@ function renderStart() {
           ${tab === "play" ? `
             <section id="play-panel" role="tabpanel" aria-labelledby="play-tab">
               <div class="settings-block">
-                ${rangeControl({ id: "difficulty", label: "Difficulty", value: persisted.playSettings.difficulty, min: 1, max: 10, setting: "difficulty" })}
+                ${rangeControl({ id: "difficulty", label: "Difficulty", value: persisted.playSettings.difficulty, min: 1, max: 5, setting: "difficulty" })}
                 <fieldset class="color-setting">
                   <legend>Play as</legend>
                   <div class="segmented three-way">
@@ -273,11 +283,13 @@ function boardMarkup({
   changed = [],
   lastMove = null,
   forcedPass = false,
+  passing = false,
+  previewSide = BLACK,
 }) {
   const legalSet = new Set(legal.map(({ move }) => move));
   const changedSet = new Set(changed);
   return `
-    <div class="board" role="group" aria-label="Othello position">
+    <div class="board" data-preview-color="${previewSide === BLACK ? "black" : "white"}" role="group" aria-label="Othello position">
       ${latticeSvg()}
       ${board.map((square, index) => {
         const isLegal = legalSet.has(index);
@@ -285,44 +297,44 @@ function boardMarkup({
         return `
           <button type="button" class="square${isLegal ? " legal" : ""}${bestMove === index ? " best" : ""}" aria-label="${label}" data-action="${action}" data-move="${index}" ${isLegal ? "" : "disabled"}>
             ${square ? `<span class="disc ${square === BLACK ? "black" : "white"}${changedSet.has(index) ? " changed" : ""}" aria-hidden="true"></span>` : ""}
-            ${isLegal ? '<span class="legal-marker" aria-hidden="true"></span>' : ""}
+            ${isLegal ? '<span class="legal-marker" aria-hidden="true"></span><span class="hover-disc" aria-hidden="true"></span>' : ""}
             ${bestMove === index ? '<span class="best-marker" aria-hidden="true"></span>' : ""}
             ${lastMove === index ? '<span class="last-move-marker" aria-hidden="true"></span>' : ""}
           </button>`;
       }).join("")}
+      ${passing ? '<span class="pass-button computer-pass" role="status">Computer passes</span>' : ""}
       ${forcedPass ? '<button type="button" class="pass-button" data-action="pass">Pass</button>' : ""}
     </div>`;
 }
 
 function occupancyMarkup(board) {
   const counts = countDiscs(board);
-  const occupied = Math.max(1, counts.black + counts.white);
-  const whitePercent = counts.white / occupied * 100;
-  const blackPercent = 100 - whitePercent;
-  return `
-    <div class="occupancy" role="img" aria-label="${counts.black} black and ${counts.white} white discs">
-      <span class="occupancy-white" style="height:${whitePercent}%"></span>
-      <span class="occupancy-black" style="height:${blackPercent}%"></span>
-    </div>`;
+  return `<div class="occupancy" role="img" aria-label="${counts.black} black and ${counts.white} white discs; ${counts.black + counts.white} occupied squares">
+    <div class="occupancy-stack">${Array.from({length: counts.white}, () => '<span class="occupancy-white"></span>').join("")}${Array.from({length: counts.black}, () => '<span class="occupancy-black"></span>').join("")}</div>
+  </div>`;
 }
 
 function menuMarkup(mode) {
-  return `
-    <button type="button" class="menu-button" data-action="toggle-menu" aria-label="Menu" aria-expanded="${menuOpen}" aria-controls="game-menu">
+  return `<button type="button" class="menu-button" data-action="toggle-menu" aria-label="Menu" aria-expanded="${menuOpen}" aria-controls="game-menu">
       <span aria-hidden="true"></span><span aria-hidden="true"></span><span aria-hidden="true"></span>
     </button>
-    ${menuOpen ? `
-      <div class="menu-popover" id="game-menu">
-        <a href="rules.html" target="_blank" rel="noopener">Rules &amp; strategy</a>
-        <fieldset>
-          <legend>Appearance</legend>
-          <div class="menu-themes">
-            ${["light", "system", "dark"].map((theme) => `<button type="button" data-action="theme" data-theme="${theme}" aria-pressed="${persisted.theme === theme}">${theme[0].toUpperCase()}${theme.slice(1)}</button>`).join("")}
-          </div>
-        </fieldset>
+    ${menuOpen ? `<div class="menu-popover" id="game-menu">
+      ${menuPage === "appearance" ? `
+        <button type="button" data-action="menu-back">‹ Menu</button>
+        <fieldset><legend>Appearance</legend><div class="menu-themes">
+          ${["light", "system", "dark"].map((theme) => `<button type="button" data-action="theme" data-theme="${theme}" aria-pressed="${persisted.theme === theme}">${theme[0].toUpperCase() + theme.slice(1)}</button>`).join("")}
+        </div></fieldset>
+        <fieldset><legend>Tiles</legend><div class="menu-themes tile-options">
+          <button type="button" data-action="tiles" data-tiles="black-white" aria-pressed="${persisted.tiles === "black-white"}">Black &amp; White</button>
+          <button type="button" data-action="tiles" data-tiles="colors" aria-pressed="${persisted.tiles === "colors"}">Colors</button>
+        </div></fieldset>
+      ` : `
+        <button type="button" data-action="rules">Rules, strategy, &amp; engine</button>
+        <button type="button" data-action="appearance">Appearance</button>
         ${mode === "play" ? '<button type="button" data-action="restart">Restart game</button>' : '<button type="button" data-action="new-analysis">New analysis</button>'}
         <button type="button" data-action="start-screen">Start screen</button>
-      </div>` : ""}`;
+      `}
+    </div>` : ""}`;
 }
 
 function playHeaderMarkup() {
@@ -361,7 +373,7 @@ function resultDialog() {
 }
 
 function renderPlay() {
-  const humanTurn = !game.completed && !game.thinking && game.side === game.humanColor;
+  const humanTurn = !game.completed && !game.thinking && !game.passing && game.side === game.humanColor;
   const forcedPass = humanTurn && game.mustPass;
   const legal = humanTurn && !forcedPass ? legalMoves(game.board, game.side) : [];
   app.innerHTML = `
@@ -376,6 +388,8 @@ function renderPlay() {
             changed: game.changed,
             lastMove: game.lastMove,
             forcedPass,
+            passing: game.passing,
+            previewSide: game.humanColor,
           })}
           ${occupancyMarkup(game.board)}
         </div>
@@ -385,21 +399,22 @@ function renderPlay() {
     </main>`;
 }
 
-async function beginGame() {
+async function beginGame(restart = false) {
+  const previous = restart ? game : null;
   if (startingGame) return;
   stopWorker();
-  const humanColor = selectedPlayerColor();
-  const difficulty = persisted.playSettings.difficulty;
-  const opening = persisted.playSettings.opening;
+  const humanColor = previous?.humanColor ?? selectedPlayerColor();
+  const difficulty = previous?.difficulty ?? persisted.playSettings.difficulty;
+  const opening = previous?.opening ?? persisted.playSettings.opening;
   startingGame = true;
   startError = "";
-  renderStart();
+  if (!previous) renderStart();
 
   let position = { board: initialBoard(), side: BLACK, events: [], sequence: null };
   try {
     if (opening === "xot") {
       const openings = await loadXotOpenings();
-      position = prepareXotOpening(openings[randomIndex(openings.length)], humanColor);
+      position = prepareXotOpening(previous?.openingSequence ?? openings[randomIndex(openings.length)], humanColor);
     }
   } catch {
     startingGame = false;
@@ -420,6 +435,7 @@ async function beginGame() {
     moves: position.events,
     startedAt: new Date().toISOString(),
     thinking: false,
+    passing: false,
     mustPass: false,
     completed: false,
     changed: [],
@@ -462,7 +478,7 @@ function finishGame() {
 }
 
 function performGameMove(move, side) {
-  if (game.completed || game.side !== side) return;
+  if (game.completed || game.passing || game.side !== side) return;
   const flips = flipsForMove(game.board, move, side);
   const next = applyMove(game.board, move, side);
   if (!next) return;
@@ -484,7 +500,7 @@ function performGameMove(move, side) {
     requestAnimationFrame(() => document.querySelector('[data-action="pass"]')?.focus());
     return;
   }
-  if (turn.automaticPass) announce(`${sideName(turn.automaticPass.side)} has no legal move and passes.`);
+  if (turn.automaticPass) { showComputerPass(); return; }
   if (game.side !== game.humanColor) beginComputerMove();
 }
 
@@ -499,46 +515,55 @@ function performHumanPass() {
   beginComputerMove();
 }
 
+function showComputerPass() {
+  game.passing = true;
+  renderPlay();
+  announce("The computer has no legal move and passes.");
+  const current = game;
+  passTimer = setTimeout(() => {
+    passTimer = null;
+    if (game !== current || screen !== "play") return;
+    game.passing = false;
+    renderPlay();
+  }, COMPUTER_MOVE_DELAY_MS);
+}
+
 function beginComputerMove() {
   if (!game || game.completed || game.side === game.humanColor) return;
   stopWorker();
   game.thinking = true;
   renderPlay();
   announce(`${sideName(game.side)} is calculating.`);
-  const requestId = ++requestSerial;
-  const side = game.side;
+  const requestId = ++requestSerial, side = game.side;
   const earliestMoveAt = performance.now() + COMPUTER_MOVE_DELAY_MS;
+  const accept = (move) => {
+    if (requestId !== requestSerial || screen !== "play" || !game) return;
+    worker?.terminate(); worker = null;
+    const apply = () => {
+      computerMoveTimer = null;
+      if (requestId !== requestSerial || screen !== "play" || !game) return;
+      game.thinking = false;
+      if (move === PASS) {
+        game.moves.push({ side, move: PASS });
+        game.side = opponent(side); game.mustPass = false;
+        if (isTerminal(game.board)) finishGame(); else showComputerPass();
+      } else performGameMove(move, side);
+    };
+    computerMoveTimer = setTimeout(apply, Math.max(0, earliestMoveAt - performance.now()));
+  };
+  const level = engineLevel(game.difficulty);
+  if (level === null) { accept(randomLegalMove(legalMoves(game.board, side))); return; }
   worker = new Worker(new URL("./ai.worker.js", import.meta.url), { type: "module" });
   worker.addEventListener("message", ({ data }) => {
-    if (data?.type !== "move" || data.requestId !== requestId || screen !== "play" || !game) return;
-    worker?.terminate();
-    worker = null;
-    const applyComputerMove = () => {
-      computerMoveTimer = null;
-      if (data.requestId !== requestSerial || screen !== "play" || !game) return;
-      game.thinking = false;
-      if (data.result.move === PASS) {
-        game.moves.push({ side, move: PASS });
-        game.side = opponent(side);
-        game.mustPass = false;
-        if (isTerminal(game.board)) finishGame();
-        else renderPlay();
-        return;
-      }
-      performGameMove(data.result.move, side);
-    };
-    const remainingDelay = Math.max(0, earliestMoveAt - performance.now());
-    if (remainingDelay > 0) computerMoveTimer = setTimeout(applyComputerMove, remainingDelay);
-    else applyComputerMove();
+    if (data?.type === "move" && data.requestId === requestId) accept(data.result.move);
   });
   worker.addEventListener("error", () => {
     stopWorker();
     if (!game || screen !== "play") return;
-    game.thinking = false;
-    renderPlay();
+    game.thinking = false; renderPlay();
     announce("The computer could not finish that calculation. Restart the game to try again.");
   });
-  worker.postMessage({ type: "move", requestId, board: game.board, side, level: game.difficulty });
+  worker.postMessage({ type: "move", requestId, board: game.board, side, level });
 }
 
 function showStart(tab = persisted.activeTab) {
@@ -567,45 +592,24 @@ function openAnalysis(gameRecord = null) {
   requestAnalysis();
 }
 
-function formatScore(value) {
-  if (value > 0) return `+${value}`;
-  if (value < 0) return `−${Math.abs(value)}`;
-  return "0";
+function lineAdvantage(line, board) {
+  return outcomeIndex(line, countDiscs(board).empty, analysisResult?.level ?? 1);
 }
-
 function analysisHeader(board) {
-  if (isTerminal(board)) {
-    const counts = countDiscs(board);
-    return `
-      <div class="analysis-value terminal">
-        <strong>${resultText(board, null)}</strong>
-        <span>Black ${counts.black} · White ${counts.white}</span>
-      </div>`;
-  }
-  if (!analysisResult) {
-    return `
-      <div class="analysis-value pending">
-        <strong>Calculating</strong>
-        <span>through level ${persisted.analysisSettings.level}</span>
-      </div>`;
-  }
-  const score = analysisResult.lines[0]?.score ?? 0;
-  return `
-    <div class="analysis-value">
-      <strong>${formatScore(score)}</strong>
-      <span>Black perspective · level ${analysisResult.level} of ${persisted.analysisSettings.level}</span>
-      <small>${analysisResult.nodes.toLocaleString()} nodes · ${Math.round(analysisResult.elapsedMs).toLocaleString()} ms</small>
+  const terminal = isTerminal(board);
+  if (!terminal && !analysisResult) return `<div class="analysis-value pending"><strong>Calculating</strong><span>through level ${persisted.analysisSettings.level}</span></div>`;
+  const c = countDiscs(board);
+  const index = terminal ? Math.sign(c.black - c.white) * 100 : lineAdvantage(analysisResult.lines[0], board);
+  return `<div class="analysis-value">
+      <strong>${formatAdvantage(index)}</strong>
+      <span><a href="rules.html#evaluation" target="_blank" rel="noopener">Net outcome advantage</a></span>
+      ${terminal ? '<small>Completed position</small>' : `<small>Level ${analysisResult.level} of ${persisted.analysisSettings.level} · ${analysisResult.nodes.toLocaleString()} nodes · ${Math.round(analysisResult.elapsedMs).toLocaleString()} ms</small>`}
     </div>`;
 }
-
 function calculatedLines() {
   if (!analysisResult?.lines?.length) return '<p class="empty-state compact">No calculated line yet.</p>';
-  return `
-    <ol class="calculated-lines">
-      ${analysisResult.lines.map((line) => `
-        <li><span class="line-score">${formatScore(line.score)}</span><span>${escapeHtml(formatLine(line.moves)) || "—"}</span></li>
-      `).join("")}
-    </ol>`;
+  const { board } = positionAtNode(analysisTree);
+  return `<ol class="calculated-lines">${analysisResult.lines.map((line) => `<li><span class="line-score">${formatAdvantage(lineAdvantage(line, board))}</span><span>${escapeHtml(formatLine(line.moves)) || "—"}</span></li>`).join("")}</ol>`;
 }
 
 function treeMarkup() {
@@ -634,7 +638,7 @@ function renderAnalysis() {
       <div class="analysis-layout">
         <div class="analysis-board-wrap">
           <div class="play-surface">
-            ${boardMarkup({ board, legal, action: "analysis-move", bestMove: Number.isInteger(bestMove) ? bestMove : null })}
+            ${boardMarkup({ board, legal, action: "analysis-move", bestMove: Number.isInteger(bestMove) ? bestMove : null, previewSide: side })}
             ${occupancyMarkup(board)}
           </div>
         </div>
@@ -731,12 +735,13 @@ app.addEventListener("click", (event) => {
     const record = gameById(persisted, control.dataset.gameId);
     if (record) openAnalysis(record);
   }
-  if (action === "play-move" && game && !game.thinking && game.side === game.humanColor) {
+  if (action === "play-move" && game && !game.thinking && !game.passing && game.side === game.humanColor) {
     performGameMove(Number(control.dataset.move), game.humanColor);
   }
   if (action === "pass") performHumanPass();
   if (action === "toggle-menu") {
     menuOpen = !menuOpen;
+    menuPage = "main";
     screen === "play" ? renderPlay() : renderAnalysis();
   }
   if (action === "theme") {
@@ -744,7 +749,19 @@ app.addEventListener("click", (event) => {
     persist();
     screen === "play" ? renderPlay() : screen === "analysis" ? renderAnalysis() : renderStart();
   }
-  if (action === "restart") showStart("play");
+  if (action === "rules") window.open("rules.html", "_blank", "noopener");
+  if (action === "appearance" || action === "menu-back") {
+    menuPage = action === "appearance" ? "appearance" : "main";
+    screen === "play" ? renderPlay() : renderAnalysis();
+    requestAnimationFrame(() => document.querySelector(".menu-popover button")?.focus());
+  }
+  if (action === "tiles") {
+    persisted.tiles = control.dataset.tiles;
+    if (persisted.tiles === "colors") persisted.palette = (persisted.palette + 1 + randomIndex(PALETTES.length - 1)) % PALETTES.length;
+    persist();
+    screen === "play" ? renderPlay() : renderAnalysis();
+  }
+  if (action === "restart") void beginGame(true);
   if (action === "start-screen") showStart(screen === "analysis" ? "analysis" : "play");
   if (action === "analyze-finished" && game?.record) openAnalysis(game.record);
   if (action === "analysis-move" && analysisTree) {

@@ -35,3 +35,9 @@ The site includes the ET Book roman line-figures webfont from Edward Tufte’s E
 > The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
 >
 > THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+## Offline calibration references
+
+Edax 4.6 by Richard Delorme and contributors was used offline to generate reference game continuations. The Edax executable and evaluation weights are not included in this repository or downloaded by the browser application. Its source is available at <https://github.com/abulmo/edax-reversi> under GPL-3.0.
+
+The statistical approach is informed by Michael Buro, “Statistical Feature Combination for the Evaluation of Game Positions,” Journal of Artificial Intelligence Research 3 (1995), 373–382, and the documented Stockfish win/draw/loss model at <https://github.com/official-stockfish/WDL_model>. The fitting scripts and coefficients here are specific to this project's independently generated reference data.

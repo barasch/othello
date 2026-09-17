@@ -9,7 +9,7 @@ test("stored settings are clamped to supported first-build ranges", () => {
     analysisSettings: { level: 10, lines: 8 },
   });
   assert.equal(state.theme, "system");
-  assert.deepEqual(state.playSettings, { difficulty: 5, color: "random", opening: "standard" });
+  assert.deepEqual(state.playSettings, { difficulty: 3, color: "random", opening: "standard" });
   assert.deepEqual(state.analysisSettings, { level: 4, lines: 1 });
 });
 
