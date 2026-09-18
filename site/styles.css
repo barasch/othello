@@ -435,7 +435,7 @@ fieldset legend {
   align-items: stretch;
   display: grid;
   gap: clamp(11px, 2.1vmin, 21px);
-  grid-template-columns: var(--board-size) clamp(13px, 2.2vmin, 22px);
+  grid-template-columns: var(--board-size);
 }
 
 .play-frame .play-surface {
@@ -547,18 +547,6 @@ fieldset legend {
 }
 
 .pass-button:hover { border-color: var(--accent); color: var(--accent); }
-
-.occupancy {
-  border: 1px solid var(--lattice);
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-  overflow: hidden;
-}
-
-.occupancy span { display: block; width: 100%; }
-.occupancy-white { background: var(--disc-white); }
-.occupancy-black { background: var(--disc-black); }
 
 .thinking .board { cursor: wait; }
 .thinking .disc { opacity: 0.93; }
@@ -704,7 +692,6 @@ fieldset legend {
 
 .analysis-board-wrap .play-surface {
   --board-size: min(66vw, 76vh, 720px);
-  grid-template-columns: var(--board-size);
 }
 
 .analysis-panel {
@@ -907,7 +894,6 @@ fieldset legend {
   .game-screen {
     padding: max(13px, env(safe-area-inset-top)) max(13px, env(safe-area-inset-right)) max(13px, env(safe-area-inset-bottom)) max(13px, env(safe-area-inset-left));
   }
-  .play-surface { gap: 9px; grid-template-columns: var(--board-size) 12px; }
   .play-frame .play-surface { --board-size: min(78vw, calc(100dvh - 135px), 72vh); }
   .analysis-board-wrap .play-surface { --board-size: min(79vw, 57vh, 560px); }
   .analysis-layout { padding-left: max(13px, env(safe-area-inset-left)); padding-right: max(47px, calc(env(safe-area-inset-right) + 34px)); }
@@ -938,12 +924,6 @@ fieldset legend {
 .board[data-preview-color="white"] .hover-disc { background: var(--disc-white); border: 2px solid var(--disc-black); }
 @media (hover: hover) { .square.legal:hover .hover-disc { display: block; } }
 @media (hover: none) { .square.legal:hover .legal-marker { opacity: 0.22; } }
-.occupancy { border: 0; justify-content: center; overflow: visible; }
-.occupancy-stack { display: flex; flex-direction: column; justify-content: center; height: 100%; }
-.occupancy .occupancy-stack > span { height: calc(100% / 64); flex: 0 0 calc(100% / 64); background: transparent; padding: 1px 0; }
-.occupancy .occupancy-stack > span::before { content: ""; display: block; width: 100%; height: 100%; box-sizing: border-box; }
-.occupancy-white::before { background: var(--disc-white); border: 1px solid var(--disc-black); }
-.occupancy-black::before { background: var(--disc-black); border: 1px solid var(--disc-white); }
 .computer-pass { cursor: default; white-space: nowrap; }
 .tile-options { grid-template-columns: 1fr 1fr; }
 .calculated-lines li { grid-template-columns: 82px 1fr; }

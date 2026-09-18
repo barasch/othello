@@ -43,7 +43,7 @@ test('play UI: five levels, restart, random play, menus, XOT, passes, analysis',
     await import('../site/js/app.js');
     assert.equal(document.querySelector('#difficulty').max,'5');
     await click('[data-action="start-game"]');
-    assert.equal(document.querySelectorAll('.occupancy-white,.occupancy-black').length,4);
+    assert.equal(document.querySelector('.occupancy'),null);
     await click('.square.legal');
     assert.equal(requests.at(-1).level,1);
     assert.equal(discs().length,5);

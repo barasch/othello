@@ -307,13 +307,6 @@ function boardMarkup({
     </div>`;
 }
 
-function occupancyMarkup(board) {
-  const counts = countDiscs(board);
-  return `<div class="occupancy" role="img" aria-label="${counts.black} black and ${counts.white} white discs; ${counts.black + counts.white} occupied squares">
-    <div class="occupancy-stack">${Array.from({length: counts.white}, () => '<span class="occupancy-white"></span>').join("")}${Array.from({length: counts.black}, () => '<span class="occupancy-black"></span>').join("")}</div>
-  </div>`;
-}
-
 function menuMarkup(mode) {
   return `<button type="button" class="menu-button" data-action="toggle-menu" aria-label="Menu" aria-expanded="${menuOpen}" aria-controls="game-menu">
       <span aria-hidden="true"></span><span aria-hidden="true"></span><span aria-hidden="true"></span>
@@ -391,7 +384,6 @@ function renderPlay() {
             passing: game.passing,
             previewSide: game.humanColor,
           })}
-          ${occupancyMarkup(game.board)}
         </div>
         ${playFooterMarkup()}
       </div>
