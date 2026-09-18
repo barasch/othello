@@ -80,6 +80,7 @@ test('play UI: five levels, restart, random play, menus, XOT, passes, analysis',
     t.diagnostic(`Observed ${computerPasses} computer passes and ${humanPasses} human passes`);
     assert.ok(computerPasses > 0, 'exercise the one-second computer pass notice');
     await click('[data-action="analyze-finished"]');
+    assert.equal(document.querySelector('.analysis-screen .occupancy'),null);
     assert.ok(document.querySelector('.analysis-value strong'));
     assert.match(document.querySelector('.analysis-value strong').textContent,/^(Black \+100|White \+100|Even · 0)$/);
     await click('[data-action="navigate"][data-direction="previous"]');

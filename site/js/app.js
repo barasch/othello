@@ -639,7 +639,6 @@ function renderAnalysis() {
         <div class="analysis-board-wrap">
           <div class="play-surface">
             ${boardMarkup({ board, legal, action: "analysis-move", bestMove: Number.isInteger(bestMove) ? bestMove : null, previewSide: side })}
-            ${occupancyMarkup(board)}
           </div>
         </div>
         <aside class="analysis-panel" aria-label="Position analysis">
