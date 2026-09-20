@@ -49,4 +49,4 @@ Analysis displays one net outcome advantage index throughout the game: `100 × (
 
 ## Interface
 
-Restart replays the same opening and assigned side at the same difficulty. The count indicator uses one segment per occupied square, white above black, centered vertically within 64 slots. Forced computer passes display for one second; human passes wait for the centered Pass control. The Appearance submenu offers system/light/dark themes and four persistent contrasting color pairs. Logical sides retain the names Black and White when recolored.
+Restart replays the same opening and assigned side at the same difficulty. Forced computer passes display for one second; human passes wait for the centered Pass control. The Appearance submenu offers system, light, and dark themes. Tiles remain Black and White in every theme.

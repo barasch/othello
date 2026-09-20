@@ -8,8 +8,6 @@ const MAX_ANALYSES = 20;
 export const DEFAULT_STATE = Object.freeze({
   version: 2,
   theme: "system",
-  tiles: "black-white",
-  palette: 0,
   activeTab: "play",
   playSettings: { difficulty: 3, color: "random", opening: "standard" },
   analysisSettings: { level: 4, lines: 1 },
@@ -66,8 +64,6 @@ export function normalizeState(value) {
   return {
     version: 2,
     theme: ["system", "light", "dark"].includes(source.theme) ? source.theme : DEFAULT_STATE.theme,
-    tiles: source.tiles === "colors" ? "colors" : "black-white",
-    palette: integerBetween(source.palette, 0, 3, 0),
     activeTab: source.activeTab === "analysis" ? "analysis" : "play",
     playSettings: {
       difficulty: integerBetween(source.playSettings?.difficulty, 1, 5, DEFAULT_STATE.playSettings.difficulty),

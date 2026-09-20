@@ -1,9 +1,7 @@
 import {
-  BLACK,
   PASS,
   advanceAfterMove,
   applyMove,
-  coordinateOf,
   initialBoard,
   legalMoves,
   opponent,
@@ -173,33 +171,6 @@ export function navigateTree(tree, direction) {
 
   tree.currentNodeId = node.id;
   return node.id;
-}
-
-export function flattenedTree(tree) {
-  const rows = [];
-  const visit = (nodeId, variationDepth, ply) => {
-    const node = tree.nodes[nodeId];
-    if (!node) return;
-    if (nodeId !== tree.rootId) rows.push({ node, variationDepth, ply });
-
-    const children = node.children.filter((id) => tree.nodes[id]);
-    const preferred = node.preferredChildId && children.includes(node.preferredChildId)
-      ? node.preferredChildId
-      : children[0];
-    for (const childId of children.filter((id) => id !== preferred)) {
-      visit(childId, variationDepth + 1, ply + 1);
-    }
-    if (preferred) visit(preferred, variationDepth, ply + 1);
-  };
-  visit(tree.rootId, 0, 0);
-  return rows;
-}
-
-export function moveLabel(node, ply) {
-  const number = Math.floor((ply - 1) / 2) + 1;
-  const prefix = node.side === BLACK ? `${number}.` : `${number}…`;
-  const move = node.move === PASS ? "pass" : coordinateOf(node.move);
-  return `${prefix} ${move}`;
 }
 
 export function nextLegalMoves(tree) {

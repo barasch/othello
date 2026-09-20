@@ -688,10 +688,17 @@ fieldset legend {
   width: min(1500px, 100%);
 }
 
-.analysis-board-wrap { display: flex; justify-content: center; min-width: 0; }
+.analysis-board-wrap {
+  --analysis-board-size: min(66vw, 76vh, 720px);
+  align-items: center;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-width: 0;
+}
 
 .analysis-board-wrap .play-surface {
-  --board-size: min(66vw, 76vh, 720px);
+  --board-size: var(--analysis-board-size);
 }
 
 .analysis-panel {
@@ -749,34 +756,31 @@ fieldset legend {
 
 .tree-scroll { min-height: 0; overflow: auto; padding-right: 8px; }
 
-.move-tree {
-  list-style: none;
+.move-score {
+  font-family: var(--sans);
+  font-size: 0.76rem;
+  line-height: 1.9;
   margin: 0;
+}
+
+.move-pair {
+  display: inline-block;
+  margin-right: 0.72em;
+  white-space: nowrap;
+}
+
+.move-number { color: var(--muted); font-variant-numeric: tabular-nums; }
+
+.move-score button {
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  font: inherit;
   padding: 0;
 }
 
-.move-tree li { margin-left: calc(var(--branch-depth) * 13px); }
-
-.move-tree button {
-  align-items: center;
-  background: transparent;
-  border: 0;
-  border-left: 1px solid transparent;
-  cursor: pointer;
-  display: flex;
-  font-family: var(--sans);
-  font-size: 0.73rem;
-  justify-content: space-between;
-  min-height: 28px;
-  padding: 4px 7px;
-  text-align: left;
-  width: 100%;
-}
-
-.move-tree button.analysis { border-left-color: var(--rule); }
-.move-tree button:hover { color: var(--accent); }
-.move-tree button[aria-current="step"] { background: color-mix(in srgb, var(--ink) 9%, transparent); color: var(--ink); }
-.move-tree small { color: var(--faint); font-size: 0.56rem; letter-spacing: 0.06em; text-transform: uppercase; }
+.move-score button:hover { color: var(--accent); }
+.move-score button[aria-current="step"] { text-decoration: underline; text-decoration-color: var(--rule); text-underline-offset: 3px; }
 
 .analysis-nav {
   display: grid;
@@ -784,6 +788,8 @@ fieldset legend {
   grid-template-columns: repeat(4, 1fr);
   padding-top: 16px;
 }
+
+.analysis-board-nav { padding-top: 12px; width: var(--analysis-board-size); }
 
 .analysis-nav button {
   background: transparent;
@@ -870,7 +876,7 @@ fieldset legend {
     padding: max(72px, env(safe-area-inset-top)) max(26px, env(safe-area-inset-right)) max(36px, env(safe-area-inset-bottom)) max(18px, env(safe-area-inset-left));
   }
 
-  .analysis-board-wrap .play-surface { --board-size: min(80vw, 66vh, 660px); }
+  .analysis-board-wrap { --analysis-board-size: min(80vw, 66vh, 660px); }
 
   .analysis-panel {
     border-left: 0;
@@ -895,7 +901,7 @@ fieldset legend {
     padding: max(13px, env(safe-area-inset-top)) max(13px, env(safe-area-inset-right)) max(13px, env(safe-area-inset-bottom)) max(13px, env(safe-area-inset-left));
   }
   .play-frame .play-surface { --board-size: min(78vw, calc(100dvh - 135px), 72vh); }
-  .analysis-board-wrap .play-surface { --board-size: min(79vw, 57vh, 560px); }
+  .analysis-board-wrap { --analysis-board-size: min(79vw, 57vh, 560px); }
   .analysis-layout { padding-left: max(13px, env(safe-area-inset-left)); padding-right: max(47px, calc(env(safe-area-inset-right) + 34px)); }
   .analysis-panel { min-height: 470px; }
   .disc.black,
@@ -917,7 +923,7 @@ fieldset legend {
   }
 }
 
-/* September update: counts, previews, and appearance. */
+/* September update: previews and analysis. */
 .square.legal:hover .legal-marker { opacity: 0; transform: none; }
 .hover-disc { display: none; position: absolute; width: 72%; aspect-ratio: 1; border-radius: 50%; opacity: 0.45; pointer-events: none; }
 .board[data-preview-color="black"] .hover-disc { background: var(--disc-black); border: 2px solid var(--disc-white); }
@@ -925,7 +931,6 @@ fieldset legend {
 @media (hover: hover) { .square.legal:hover .hover-disc { display: block; } }
 @media (hover: none) { .square.legal:hover .legal-marker { opacity: 0.22; } }
 .computer-pass { cursor: default; white-space: nowrap; }
-.tile-options { grid-template-columns: 1fr 1fr; }
 .calculated-lines li { grid-template-columns: 82px 1fr; }
 .analysis-value a { color: inherit; text-decoration: underline; text-decoration-color: var(--rule); text-underline-offset: 3px; }
 .analysis-formula { font-size: 1.15rem; line-height: 1.9; margin: 1.2rem 0; }

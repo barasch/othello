@@ -13,7 +13,6 @@ import {
   resultText,
   sideName,
 } from "./rules.js";
-import { tileColors, PALETTES } from "./appearance.js";
 import { outcomeIndex, formatAdvantage } from "./calibration.js";
 import { formatLine } from "./engine.js";
 import { parseXotList, prepareXotOpening } from "./openings.js";
@@ -27,9 +26,8 @@ import {
 import {
   addVariation,
   createAnalysisTree,
-  flattenedTree,
-  moveLabel,
   navigateTree,
+  pathToNode,
   positionAtNode,
   selectNode,
 } from "./tree.js";
@@ -81,9 +79,6 @@ function announce(message) {
 }
 
 function applyTheme() {
-  const colors = tileColors(persisted.tiles, persisted.palette);
-  document.documentElement.style.setProperty("--disc-black", colors.dark);
-  document.documentElement.style.setProperty("--disc-white", colors.light);
   if (persisted.theme === "system") delete document.documentElement.dataset.theme;
   else document.documentElement.dataset.theme = persisted.theme;
   const dark = persisted.theme === "dark" || (persisted.theme === "system" && prefersDark.matches);
@@ -316,10 +311,6 @@ function menuMarkup(mode) {
         <button type="button" data-action="menu-back">‹ Menu</button>
         <fieldset><legend>Appearance</legend><div class="menu-themes">
           ${["light", "system", "dark"].map((theme) => `<button type="button" data-action="theme" data-theme="${theme}" aria-pressed="${persisted.theme === theme}">${theme[0].toUpperCase() + theme.slice(1)}</button>`).join("")}
-        </div></fieldset>
-        <fieldset><legend>Tiles</legend><div class="menu-themes tile-options">
-          <button type="button" data-action="tiles" data-tiles="black-white" aria-pressed="${persisted.tiles === "black-white"}">Black &amp; White</button>
-          <button type="button" data-action="tiles" data-tiles="colors" aria-pressed="${persisted.tiles === "colors"}">Colors</button>
         </div></fieldset>
       ` : `
         <button type="button" data-action="rules">Rules, strategy, &amp; engine</button>
@@ -604,20 +595,29 @@ function calculatedLines() {
   return `<ol class="calculated-lines">${analysisResult.lines.map((line) => `<li><span class="line-score">${formatAdvantage(lineAdvantage(line, board))}</span><span>${escapeHtml(formatLine(line.moves)) || "—"}</span></li>`).join("")}</ol>`;
 }
 
-function treeMarkup() {
-  const rows = flattenedTree(analysisTree);
-  if (!rows.length) return '<p class="empty-state compact">Choose a legal move on the lattice to begin a variation.</p>';
-  return `
-    <ol class="move-tree">
-      ${rows.map(({ node, variationDepth, ply }) => `
-        <li style="--branch-depth:${Math.min(variationDepth, 6)}">
-          <button type="button" data-action="select-node" data-node-id="${escapeHtml(node.id)}" aria-current="${node.id === analysisTree.currentNodeId ? "step" : "false"}" class="${node.source}">
-            <span>${moveLabel(node, ply)}</span>
-            ${node.source === "played" ? '<small>game</small>' : ""}
-          </button>
-        </li>
-      `).join("")}
-    </ol>`;
+function moveScoreMarkup() {
+  const path = pathToNode(analysisTree);
+  if (!path.length) return '<p class="empty-state compact">Choose a legal move on the lattice to begin a variation.</p>';
+  const pairs = [];
+  for (const node of path) {
+    if (node.side === BLACK || !pairs.length) pairs.push({ number: pairs.length + 1, nodes: [node] });
+    else pairs.at(-1).nodes.push(node);
+  }
+  const moveButton = (node) => {
+    const move = node.move === PASS ? "pass" : coordinateOf(node.move);
+    const current = node.id === analysisTree.currentNodeId ? ' aria-current="step"' : "";
+    return `<button type="button" data-action="select-node" data-node-id="${escapeHtml(node.id)}"${current}>${move}</button>`;
+  };
+  return `<p class="move-score">${pairs.map(({ number, nodes }) => `<span class="move-pair"><span class="move-number">${number}.</span> ${nodes.map(moveButton).join(" ")}</span>`).join(" ")}</p>`;
+}
+
+function analysisNavigationMarkup() {
+  return `<nav class="analysis-nav analysis-board-nav" aria-label="Move navigation">
+    <button type="button" data-action="navigate" data-direction="first" aria-label="First position">│‹</button>
+    <button type="button" data-action="navigate" data-direction="previous" aria-label="Previous move">‹</button>
+    <button type="button" data-action="navigate" data-direction="next" aria-label="Next move">›</button>
+    <button type="button" data-action="navigate" data-direction="last" aria-label="Last position on selected line">›│</button>
+  </nav>`;
 }
 
 function renderAnalysis() {
@@ -632,6 +632,7 @@ function renderAnalysis() {
           <div class="play-surface">
             ${boardMarkup({ board, legal, action: "analysis-move", bestMove: Number.isInteger(bestMove) ? bestMove : null, previewSide: side })}
           </div>
+          ${analysisNavigationMarkup()}
         </div>
         <aside class="analysis-panel" aria-label="Position analysis">
           <header>
@@ -644,14 +645,8 @@ function renderAnalysis() {
           </section>
           <section class="panel-section tree-section" aria-labelledby="tree-title">
             <h2 id="tree-title">Moves</h2>
-            <div class="tree-scroll">${treeMarkup()}</div>
+            <div class="tree-scroll">${moveScoreMarkup()}</div>
           </section>
-          <nav class="analysis-nav" aria-label="Move navigation">
-            <button type="button" data-action="navigate" data-direction="first" aria-label="First position">│‹</button>
-            <button type="button" data-action="navigate" data-direction="previous" aria-label="Previous move">‹</button>
-            <button type="button" data-action="navigate" data-direction="next" aria-label="Next move">›</button>
-            <button type="button" data-action="navigate" data-direction="last" aria-label="Last position on selected line">›│</button>
-          </nav>
         </aside>
       </div>
     </main>`;
@@ -745,12 +740,6 @@ app.addEventListener("click", (event) => {
     menuPage = action === "appearance" ? "appearance" : "main";
     screen === "play" ? renderPlay() : renderAnalysis();
     requestAnimationFrame(() => document.querySelector(".menu-popover button")?.focus());
-  }
-  if (action === "tiles") {
-    persisted.tiles = control.dataset.tiles;
-    if (persisted.tiles === "colors") persisted.palette = (persisted.palette + 1 + randomIndex(PALETTES.length - 1)) % PALETTES.length;
-    persist();
-    screen === "play" ? renderPlay() : renderAnalysis();
   }
   if (action === "restart") void beginGame(true);
   if (action === "start-screen") showStart(screen === "analysis" ? "analysis" : "play");
