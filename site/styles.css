@@ -939,3 +939,5 @@ fieldset legend {
 .coefficient-table caption { text-align: left; font-size: 0.95rem; margin-bottom: 0.7rem; }
 .coefficient-table th, .coefficient-table td { text-align: right; padding: 0.35rem 0.45rem; border-bottom: 1px solid var(--rule); white-space: nowrap; }
 .coefficient-table th:first-child { text-align: left; }
+
+.global-home-mark{display:inline-flex;text-decoration:none}.local-home{border:0;background:transparent;color:inherit;font:inherit;padding:0;cursor:pointer}.analysis-identity{position:fixed;left:max(18px,env(safe-area-inset-left));top:max(18px,env(safe-area-inset-top));z-index:30;display:flex;align-items:center;gap:8px}.analysis-identity img{display:block;width:23px;height:23px}.reading-identity{display:inline-flex;align-items:center;gap:9px}:root[data-theme="dark"] .global-home-mark img{filter:invert(1)}
