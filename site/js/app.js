@@ -187,7 +187,7 @@ function renderStart() {
     <main class="start-screen">
       <section class="start-card" aria-labelledby="site-title">
         <header class="brand">
-          <img src="assets/sb-mark.png" width="72" height="72" alt="">
+          <a class="global-home-mark" href="https://barasch.github.io/index/" aria-label="SB home"><img src="assets/sb-mark.png" width="72" height="72" alt=""></a>
           <h1 id="site-title">Othello</h1>
         </header>
 
@@ -324,10 +324,7 @@ function menuMarkup(mode) {
 function playHeaderMarkup() {
   return `
     <header class="play-header">
-      <div class="play-brand" aria-label="Othello">
-        <img src="assets/sb-mark.png" width="24" height="24" alt="">
-        <span>Othello</span>
-      </div>
+      <div class="play-brand"><a class="global-home-mark" href="https://barasch.github.io/index/" aria-label="SB home"><img src="assets/sb-mark.png" width="24" height="24" alt=""></a><button type="button" class="local-home" data-action="start-screen">Othello</button></div>
       <div class="play-menu">${menuMarkup("play")}</div>
     </header>`;
 }
@@ -626,6 +623,7 @@ function renderAnalysis() {
   const bestMove = analysisResult?.lines?.[0]?.moves?.[0];
   app.innerHTML = `
     <main class="analysis-screen">
+      <div class="analysis-identity"><a class="global-home-mark" href="https://barasch.github.io/index/" aria-label="SB home"><img src="assets/sb-mark.png" width="24" height="24" alt=""></a><button type="button" class="local-home" data-action="start-screen">Othello</button></div>
       ${menuMarkup("analysis")}
       <div class="analysis-layout">
         <div class="analysis-board-wrap">
