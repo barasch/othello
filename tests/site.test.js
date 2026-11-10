@@ -5,7 +5,7 @@ import { readFile } from "node:fs/promises";
 test("the static entry point identifies the game and loads the module app", async () => {
   const html = await readFile(new URL("../site/index.html", import.meta.url), "utf8");
   assert.match(html, /<title>Othello<\/title>/);
-  assert.match(html, /type="module" src="js\/app\.js"/);
+  assert.match(html, /type="module" src="js\/app\.js(?:\?v=\d+)?"/);
   assert.match(html, /meta name="viewport"/);
 });
 
