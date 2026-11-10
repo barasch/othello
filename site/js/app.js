@@ -302,6 +302,23 @@ function boardMarkup({
     </div>`;
 }
 
+function occupancyMarkup(board) {
+  const counts = countDiscs(board);
+  const occupied = counts.black + counts.white;
+  const tiles = (side, count) => Array.from(
+    { length: count },
+    () => `<span class="occupancy-tile occupancy-${side}"></span>`,
+  ).join("");
+  return `<div class="occupancy" role="img" aria-label="White ${counts.white}, Black ${counts.black}; ${occupied} occupied ${occupied === 1 ? "square" : "squares"}">
+    <span class="occupancy-count occupancy-count-white" aria-hidden="true">${counts.white}</span>
+    <div class="occupancy-stacks" aria-hidden="true">
+      <div class="occupancy-half occupancy-half-white">${tiles("white", counts.white)}</div>
+      <div class="occupancy-half occupancy-half-black">${tiles("black", counts.black)}</div>
+    </div>
+    <span class="occupancy-count occupancy-count-black" aria-hidden="true">${counts.black}</span>
+  </div>`;
+}
+
 function menuMarkup(mode) {
   return `<button type="button" class="menu-button" data-action="toggle-menu" aria-label="Menu" aria-expanded="${menuOpen}" aria-controls="game-menu">
       <span aria-hidden="true"></span><span aria-hidden="true"></span><span aria-hidden="true"></span>
@@ -362,6 +379,7 @@ function renderPlay() {
       <div class="play-frame">
         ${playHeaderMarkup()}
         <div class="play-surface">
+          ${occupancyMarkup(game.board)}
           ${boardMarkup({
             board: game.board,
             legal,
@@ -628,6 +646,7 @@ function renderAnalysis() {
       <div class="analysis-layout">
         <div class="analysis-board-wrap">
           <div class="play-surface">
+            ${occupancyMarkup(board)}
             ${boardMarkup({ board, legal, action: "analysis-move", bestMove: Number.isInteger(bestMove) ? bestMove : null, previewSide: side })}
           </div>
           ${analysisNavigationMarkup()}
