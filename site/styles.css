@@ -19,6 +19,7 @@
   --lattice: rgba(17, 17, 15, 0.58);
   --disc-black: #090a09;
   --disc-white: #fffef7;
+  --occupancy-gray: #767676;
   --sans: "Gill Sans", "Gill Sans MT", Calibri, "Trebuchet MS", sans-serif;
   --serif: "ET Book", Palatino, "Palatino Linotype", "Book Antiqua", Georgia, serif;
   font-family: var(--serif);
@@ -432,16 +433,76 @@ fieldset legend {
 
 .play-surface {
   --board-size: min(78vmin, 700px);
-  align-items: stretch;
   display: grid;
-  gap: clamp(11px, 2.1vmin, 21px);
+  gap: clamp(8px, calc(var(--board-size) / 32), 18px);
   grid-template-columns: var(--board-size);
+  grid-template-rows: auto var(--board-size);
+  width: var(--board-size);
 }
 
 .play-frame .play-surface {
-  --board-size: min(76vmin, calc(100dvh - 170px), 700px);
+  --board-size: min(76vmin, calc(100dvh - 230px), 700px);
   align-self: center;
 }
+
+.occupancy {
+  align-items: center;
+  background: var(--occupancy-gray);
+  display: grid;
+  font-family: var(--sans);
+  font-size: clamp(0.72rem, calc(var(--board-size) / 48), 0.9rem);
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  grid-template-columns: clamp(28px, 8%, 48px) 1fr clamp(28px, 8%, 48px);
+  height: clamp(24px, calc(var(--board-size) / 16), 42px);
+  line-height: 1;
+  overflow: hidden;
+  width: var(--board-size);
+}
+
+.occupancy-count {
+  position: relative;
+  z-index: 1;
+}
+
+.occupancy-count-white {
+  color: var(--disc-white);
+  padding-left: clamp(8px, 2vw, 14px);
+  text-align: left;
+}
+
+.occupancy-count-black {
+  color: var(--disc-black);
+  padding-right: clamp(8px, 2vw, 14px);
+  text-align: right;
+}
+
+.occupancy-stacks {
+  align-items: center;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  height: 100%;
+  min-width: 0;
+}
+
+.occupancy-half {
+  align-items: center;
+  display: flex;
+  height: 100%;
+  min-width: 0;
+}
+
+.occupancy-half-white { flex-direction: row-reverse; }
+.occupancy-half-black { flex-direction: row; }
+
+.occupancy-tile {
+  display: block;
+  flex: 0 0 calc(100% / 64);
+  height: 58%;
+}
+
+.occupancy-white { background: var(--disc-white); }
+.occupancy-black { background: var(--disc-black); }
 
 .board {
   aspect-ratio: 1;
@@ -689,7 +750,7 @@ fieldset legend {
 }
 
 .analysis-board-wrap {
-  --analysis-board-size: min(66vw, 76vh, 720px);
+  --analysis-board-size: min(66vw, calc(76vh - 60px), 720px);
   align-items: center;
   display: flex;
   flex-direction: column;
@@ -900,8 +961,8 @@ fieldset legend {
   .game-screen {
     padding: max(13px, env(safe-area-inset-top)) max(13px, env(safe-area-inset-right)) max(13px, env(safe-area-inset-bottom)) max(13px, env(safe-area-inset-left));
   }
-  .play-frame .play-surface { --board-size: min(78vw, calc(100dvh - 135px), 72vh); }
-  .analysis-board-wrap { --analysis-board-size: min(79vw, 57vh, 560px); }
+  .play-frame .play-surface { --board-size: min(78vw, calc(100dvh - 183px), 72vh); }
+  .analysis-board-wrap { --analysis-board-size: min(79vw, calc(57vh - 42px), 560px); }
   .analysis-layout { padding-left: max(13px, env(safe-area-inset-left)); padding-right: max(47px, calc(env(safe-area-inset-right) + 34px)); }
   .analysis-panel { min-height: 470px; }
   .disc.black,
