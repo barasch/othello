@@ -43,8 +43,11 @@ test('play UI: five levels, restart, random play, menus, XOT, passes, analysis',
     await import('../site/js/app.js');
     assert.equal(document.querySelector('#difficulty').max,'5');
     await click('[data-action="start-game"]');
-    assert.equal(document.querySelector('.occupancy'),null);
+    assert.equal(document.querySelector('.occupancy').getAttribute('aria-label'),'White 2, Black 2; 4 occupied squares');
+    assert.equal(document.querySelectorAll('.occupancy-white').length,2);
+    assert.equal(document.querySelectorAll('.occupancy-black').length,2);
     await click('.square.legal');
+    assert.equal(document.querySelector('.occupancy').getAttribute('aria-label'),'White 1, Black 4; 5 occupied squares');
     assert.equal(requests.at(-1).level,1);
     assert.equal(discs().length,5);
     await tick(999);assert.equal(discs().length,5);
@@ -80,13 +83,14 @@ test('play UI: five levels, restart, random play, menus, XOT, passes, analysis',
     t.diagnostic(`Observed ${computerPasses} computer passes and ${humanPasses} human passes`);
     assert.ok(computerPasses > 0, 'exercise the one-second computer pass notice');
     await click('[data-action="analyze-finished"]');
-    assert.equal(document.querySelector('.analysis-screen .occupancy'),null);
+    assert.ok(document.querySelector('.analysis-screen .occupancy'));
     assert.ok(document.querySelector('.analysis-board-wrap > .analysis-nav'));
     assert.equal(document.querySelector('.analysis-panel > .analysis-nav'),null);
     const fullMoveCount=document.querySelectorAll('.move-score [data-action="select-node"]').length;
     assert.ok(fullMoveCount>2);
     await click('[data-action="navigate"][data-direction="first"]');
     assert.equal(document.querySelectorAll('.move-score [data-action="select-node"]').length,0);
+    assert.equal(document.querySelector('.occupancy').getAttribute('aria-label'),'White 2, Black 2; 4 occupied squares');
     await click('[data-action="navigate"][data-direction="next"]');
     assert.equal(document.querySelectorAll('.move-score [data-action="select-node"]').length,1);
     assert.match(document.querySelector('.move-score').textContent,/^1\.\s*[a-h][1-8]/i);
